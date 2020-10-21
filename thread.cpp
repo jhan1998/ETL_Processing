@@ -1,6 +1,7 @@
 #include <bits/stdc++.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/time.h>
 using namespace std;
 stringstream output_buffer;
 
@@ -18,16 +19,16 @@ class thread_out
 private:
     /* data */
     int flag = 0;
+    int thread_num;
+    vector <string> res;
 public:
-    thread_out(/* args */);
+    thread_out(int n) : res(vector<string> (n)){thread_num = n;}
     void out_file(int, int, int);
     vector <vector<int>> num;
+    double time = 0;
+    string get_res(int index) {return res[index];}
     ~thread_out();
 };
-
-thread_out::thread_out(/* args */)
-{
-}
 
 void thread_out::out_file(int turns, int begin, int end){
     stringstream tmp;
@@ -41,12 +42,10 @@ void thread_out::out_file(int turns, int begin, int end){
         else tmp << "\t}\n";
         
     }
-
-    while(turns != flag)
-        ;
-
-    output_buffer << tmp.str();
-
+    res[turns] = tmp.str();
+    // while(turns != flag)
+    //     ;
+    //output_buffer << tmp.str();
     flag++;
 }
 
@@ -63,12 +62,12 @@ int main(int argc, char **argv){
         cout << "please enter the nums of threads\n";
         exit(1);
     }
-    thread_out thread_out;
     int num_thread = atoi(argv[1]);
+    thread_out thread_out(num_thread);
     cout << "Thread's number : " << num_thread << endl;
-    double s, e;
-    
-    s = clock();
+    struct timeval start, end;
+    gettimeofday(&start, 0);
+
     FILE *in = fopen("input.csv", "r");
     FILE *out = fopen("output.json", "w");
     char buf[1000];
@@ -89,21 +88,33 @@ int main(int argc, char **argv){
     }
     int set_num = thread_out.num.size() / num_thread;
     cout << "A thread need to deal with " << set_num << " sets of nums\n";
+    struct timeval thread_s, thread_e;
+    gettimeofday(&thread_s, 0);
     vector <thread> threads;
     for(int i = 0; i < num_thread; i++){
-        threads.push_back(thread(func, ref(thread_out), i, i*set_num, (i*set_num) + set_num));
+        i == (num_thread - 1) ? threads.push_back(thread(func, ref(thread_out), i, i*set_num, thread_out.num.size()))
+                            : threads.push_back(thread(func, ref(thread_out), i, i*set_num, (i*set_num) + set_num));
     }
     for(int i = 0; i < num_thread; i++){
         threads[i].join();
+        output_buffer << thread_out.get_res(i);
     }
+    gettimeofday(&thread_e, 0);
+    long seconds = thread_e.tv_sec - thread_s.tv_sec;
+    long microseconds = thread_e.tv_usec - thread_s.tv_usec;
+    double elapsed = seconds + microseconds*1e-6;
+    cout << "Threads processing time : " << elapsed << endl;
 
     output_buffer << "]";
     fputs(output_buffer.str().c_str(),out);
-    e = clock();
+    gettimeofday(&end, 0);
     output_buffer.str("");
     fclose(in);
     fclose(out);
-    cout << num_thread << " threads total transfer time ----> " << (e - s) / CLOCKS_PER_SEC << endl;
+    seconds = end.tv_sec - start.tv_sec;
+    microseconds = end.tv_usec - start.tv_usec;
+    elapsed = seconds + microseconds*1e-6;
+    cout << num_thread << " threads total transfer time ----> " << elapsed << endl;
 
     return 0;
 }
