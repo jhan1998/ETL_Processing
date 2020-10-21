@@ -3,16 +3,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 using namespace std;
-stringstream output_buffer;
-
-string into_Tempelate(int index, int data){
-    stringstream ss;
-    ss << "\"col_" << index << "\":";
-    if(index < 20)
-        ss << data << ",\n";
-    else ss << data << "\n";
-    return ss.str();
-}
 
 class thread_out
 {
@@ -35,7 +25,8 @@ void thread_out::out_file(int turns, int begin, int end){
     for(int i = begin; i < end; i++){
         tmp << "\t{\n";
         for(int j = 0; j < 20; j++){
-            tmp << "\t" << "\t" << into_Tempelate(j+1, num[i][j]);
+            j != 19 ? tmp << "\t" << "\t" << "\"col_" << j+1 << "\":" << num[i][j] << ",\n"
+                        :tmp << "\t" << "\t" << "\"col_" << j+1 << "\":" << num[i][j] << "\n";
         }
         if(i != num.size() - 1)
             tmp << "\t},\n";
@@ -46,7 +37,7 @@ void thread_out::out_file(int turns, int begin, int end){
     // while(turns != flag)
     //     ;
     //output_buffer << tmp.str();
-    flag++;
+    //flag++;
 }
 
 thread_out::~thread_out()
@@ -71,7 +62,7 @@ int main(int argc, char **argv){
     FILE *in = fopen("input.csv", "r");
     FILE *out = fopen("output.json", "w");
     char buf[1000];
-    output_buffer << "[\n";
+    fputs("[\n",out);
     while(fgets(buf, 1000, in)){
         const char *d = "|";
         char *p = strtok(buf,d);
@@ -97,7 +88,7 @@ int main(int argc, char **argv){
     }
     for(int i = 0; i < num_thread; i++){
         threads[i].join();
-        output_buffer << thread_out.get_res(i);
+        //output_buffer << thread_out.get_res(i);
     }
     gettimeofday(&thread_e, 0);
     long seconds = thread_e.tv_sec - thread_s.tv_sec;
@@ -105,10 +96,11 @@ int main(int argc, char **argv){
     double elapsed = seconds + microseconds*1e-6;
     cout << "Threads processing time : " << elapsed << endl;
 
-    output_buffer << "]";
-    fputs(output_buffer.str().c_str(),out);
+    for(int i = 0; i < num_thread; i++){
+        fputs(thread_out.get_res(i).c_str(), out);
+    }
+    fputs("]", out);
     gettimeofday(&end, 0);
-    output_buffer.str("");
     fclose(in);
     fclose(out);
     seconds = end.tv_sec - start.tv_sec;
